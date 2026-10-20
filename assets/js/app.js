@@ -15,7 +15,7 @@
 
   /* ---------- twinkles ---------- */
   const tw = $('#tw'); if (tw && !reduce) {
-    for (let i = 0; i < 26; i++) { const e = document.createElement('i'); e.style.left = Math.random() * 100 + '%'; e.style.top = Math.random() * 100 + '%'; e.style.setProperty('--s', (6 + Math.random() * 10).toFixed(0) + 'px'); e.style.setProperty('--d', (3 + Math.random() * 4).toFixed(1) + 's'); e.style.setProperty('--dl', (-Math.random() * 6).toFixed(1) + 's'); tw.appendChild(e); }
+    for (let i = 0; i < 14; i++) { const e = document.createElement('i'); e.style.left = Math.random() * 100 + '%'; e.style.top = Math.random() * 100 + '%'; e.style.setProperty('--s', (6 + Math.random() * 10).toFixed(0) + 'px'); e.style.setProperty('--d', (3 + Math.random() * 4).toFixed(1) + 's'); e.style.setProperty('--dl', (-Math.random() * 6).toFixed(1) + 's'); tw.appendChild(e); }
   }
 
   /* ---------- the cycle tape ---------- */
@@ -63,8 +63,6 @@
     };
     requestAnimationFrame(sway);
   }
-  // the step cards glow where the pointer is
-  $$('.step').forEach(s => s.addEventListener('pointermove', e => { const r = s.getBoundingClientRect(); s.style.setProperty('--px', (e.clientX - r.left) + 'px'); s.style.setProperty('--py', (e.clientY - r.top) + 'px'); }));
 
   /* ---------- motion: reading progress, a soft glow that follows the pointer, hero parallax, rising sparkles,
      headings that rise word by word, magnetic buttons ---------- */
@@ -138,6 +136,7 @@
     try {
       const r = await liveApi();
       if (r.vaultSol != null) { countTo($('#sVault'), r.vaultSol, v => v.toFixed(2) + ' SOL'); lastOk = Date.now(); } else $('#sVaultD').textContent = 'Solana is busy, retrying';
+      if (r.vaultSol != null && mStarted && mcache[mview]) { mgrid.dataset.sig = ''; mRender(mcache[mview].j); }
       if (r.cards) {
         const cards = r.cards; countTo($('#sCards'), cards.length, v => String(Math.round(v)));
         if (cards.length) {
@@ -154,6 +153,107 @@
   if (C.ca) rc.push(`<a href="https://solscan.io/token/${esc(C.ca)}" target="_blank" rel="noopener">Token on Solscan ↗</a>`, `<a href="https://dexscreener.com/solana/${esc(C.ca)}" target="_blank" rel="noopener">Chart ↗</a>`);
   if (rc.length) { $('#receipts').innerHTML = rc.join(''); $('#liveLede').textContent = 'Read straight from Solana and the chart, every 30 seconds. Nothing here is typed in by hand.'; }
   if (C.vault) $('#binderLink').innerHTML = `<a href="https://solscan.io/account/${esc(C.vault)}" target="_blank" rel="noopener" style="color:var(--y);text-decoration:none">Open the vault ↗</a>`;
+
+  /* ---------- 01 the story: the stage plays whichever move you are reading ---------- */
+  const stage = $('#stage'), ssteps = $$('.sstep'), sCap = $('#stCap'), sStamp = $('#stStamp'), sWrap = $('.story-steps');
+  const CAPS = ['01 · fees stack', '02 · cop a grail', '03 · relist higher', '04 · flip and burn'];
+  const sList = $('#stList'); if (sList) sList.style.setProperty('--w', Math.min(96, Math.round(68 * (Number(C.markup) || 1.2))) + '%');
+  let cur = 0;
+  function setStep(i) {
+    if (i === cur) return; cur = i; stage.dataset.s = i;
+    ssteps.forEach((s, k) => s.classList.toggle('on', k === i));
+    if (i === 1 || i === 3) sStamp.textContent = i === 3 ? 'SOLD' : 'BOUGHT';
+    sCap.textContent = CAPS[i]; sCap.classList.remove('sw'); void sCap.offsetWidth; sCap.classList.add('sw');
+  }
+  function storyTick() {
+    const sr = stage.getBoundingClientRect(), line = innerWidth <= 900 ? (Math.max(sr.bottom, 0) + innerHeight) / 2 : innerHeight / 2;
+    let best = 0, bd = Infinity;
+    ssteps.forEach((s, k) => { const b = s.getBoundingClientRect(), d = Math.abs(b.top + b.height / 2 - line); if (d < bd) { bd = d; best = k; } });
+    setStep(best);
+    const wr = sWrap.getBoundingClientRect(); sWrap.style.setProperty('--sp', (Math.max(0, Math.min(1, (line - wr.top) / wr.height)) * 100).toFixed(1) + '%');
+  }
+  if (stage && ssteps.length) {
+    ssteps[0].classList.add('on');
+    let sraf = 0; const sq = () => { if (!sraf) sraf = requestAnimationFrame(() => { sraf = 0; storyTick(); }); };
+    addEventListener('scroll', sq, { passive: true }); addEventListener('resize', sq); storyTick();
+  }
+
+  /* ---------- 02 the market: real graded Pokémon listings, through our own /api/market (Magic Eden underneath) ---------- */
+  const mgrid = $('#mgrid'), mchip = $('#mktChip'), mtabs = $('#mktTabs'), mind = mtabs && mtabs.querySelector('.tab-ind');
+  const mcache = {}; let mview = 'grails', mreq = 0, mAt = 0, mStarted = false;
+  const solFmt = v => v >= 1000 ? Math.round(v).toLocaleString('en-US') : v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+  const usd0 = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e5 ? '$' + Math.round(v / 1e3) + 'K' : v >= 1e4 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + Math.round(v).toLocaleString('en-US');
+  const trunc = (s, n) => (s = String(s || '')).length > n ? s.slice(0, n - 1).trim() + '…' : s;
+  const thumb = (u, w) => 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + w + '&output=webp&q=80';
+  const perView = () => innerWidth <= 1060 ? 8 : 12;
+  const skeleton = n => Array.from({ length: n }, () => '<div class="mc sk shown"><div class="mimg"></div><div class="mbody"><i class="skl" style="width:84%"></i><i class="skl" style="width:52%"></i><i class="skl" style="width:40%;margin-top:auto"></i></div></div>').join('');
+  function moveInd() { const b = mtabs && mtabs.querySelector('button.on'); if (!b || !mind) return; mind.style.width = b.offsetWidth + 'px'; mind.style.transform = `translateX(${b.offsetLeft}px)`; }
+  function mCard(x, i) {
+    const gl = [x.grader, x.grade].filter(Boolean).join(' ') || x.gradeLabel || '';
+    const cop = C.vault && liveCache && liveCache.vaultSol != null && x.price <= liveCache.vaultSol;
+    const meta = [x.year, x.gradeLabel].filter(Boolean).join(' · ') || 'graded, vaulted';
+    return `<a class="mc" href="${esc(x.url)}" target="_blank" rel="noopener" style="--d:${(Math.min(i, 12) * .045).toFixed(3)}s" title="${esc(x.full || x.name)}">`
+      + `<div class="mimg">${x.image ? `<img src="${esc(thumb(x.image, 400))}" data-o="${esc(x.image)}" alt="${esc(x.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<span class="noimg">no photo</span>'}`
+      + (gl ? `<span class="grade${Number(x.grade) === 10 ? ' g10' : ''}">${esc(gl)}</span>` : '') + (cop ? '<span class="mcop">vault can cop</span>' : '') + '</div>'
+      + `<div class="mbody"><div class="mname">${esc(x.name || 'Graded card')}</div><div class="mmeta">${esc(meta)}</div>`
+      + `<div class="mprice"><b>${solFmt(x.price)} SOL</b><span>${x.usd != null ? '≈ ' + usd0(x.usd) : ''}</span></div></div></a>`;
+  }
+  function mChip() { if (!mAt) return; const s = Math.max(0, Math.round((Date.now() - mAt) / 1000)); mchip.className = 'chip live'; mchip.innerHTML = `<i></i>live · ${s < 5 ? 'just now' : s < 90 ? s + 's ago' : Math.round(s / 60) + 'm ago'}`; }
+  function mRender(j) {
+    const items = j.items || [], sig = mview + ':' + items.map(x => x.mint + x.price).join(',');
+    mAt = j.at || Date.now(); mChip();
+    if (mgrid.dataset.sig === sig) return; mgrid.dataset.sig = sig;
+    mgrid.classList.toggle('empty', !items.length);
+    if (!items.length) { mgrid.innerHTML = '<div class="mempty"><p>Nothing on this shelf right now. Try another one.</p></div>'; return; }
+    mgrid.innerHTML = items.map(mCard).join(''); mgrid.scrollLeft = 0;
+    mgrid.querySelectorAll('img').forEach(im => { if (im.complete && im.naturalWidth) im.classList.add('ld'); });
+    requestAnimationFrame(() => requestAnimationFrame(() => mgrid.querySelectorAll('.mc').forEach(m => m.classList.add('shown'))));
+  }
+  async function mFetch(v) {
+    const c = mcache[v]; if (c && Date.now() - c.t < 55000) return c.j;
+    const j = await getJ('/api/market?view=' + v, 12000); if (!j || !j.ok) throw new Error('bad');
+    mcache[v] = { j, t: Date.now() }; return j;
+  }
+  async function loadMarket(v, quiet) {
+    mview = v; const my = ++mreq;
+    mtabs.querySelectorAll('button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }); moveInd();
+    if (!quiet && !(mcache[v] && Date.now() - mcache[v].t < 55000)) { mgrid.dataset.sig = ''; mgrid.classList.remove('empty'); mgrid.innerHTML = skeleton(perView()); }
+    try { const j = await mFetch(v); if (my === mreq) mRender(j); }
+    catch {
+      if (my !== mreq) return;
+      if (mcache[v]) { mRender(mcache[v].j); return; }
+      if (quiet && mgrid.dataset.sig) return;
+      mchip.className = 'chip'; mchip.innerHTML = '<i></i>offline'; mgrid.dataset.sig = ''; mgrid.classList.add('empty');
+      mgrid.innerHTML = '<div class="mempty"><p>The card market is not answering right now.</p><button class="btn ghost sm" type="button" data-retry>Try again</button></div>';
+    }
+  }
+  if (mgrid && mtabs) {
+    mgrid.innerHTML = skeleton(perView());
+    mgrid.addEventListener('load', e => { if (e.target.tagName === 'IMG') e.target.classList.add('ld'); }, true);
+    mgrid.addEventListener('error', e => { const im = e.target; if (im.tagName !== 'IMG') return; const o = im.dataset.o; if (o) { im.dataset.o = ''; im.src = o; } else { const n = document.createElement('span'); n.className = 'noimg'; n.textContent = 'no photo'; im.replaceWith(n); } }, true);
+    mgrid.addEventListener('click', e => { if (e.target.closest('[data-retry]')) loadMarket(mview); });
+    mtabs.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b && b.dataset.v !== mview) loadMarket(b.dataset.v); });
+    mtabs.addEventListener('keydown', e => { if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return; const bs = [...mtabs.querySelectorAll('button')], i = bs.findIndex(b => b.dataset.v === mview), n = bs[(i + (e.key === 'ArrowRight' ? 1 : bs.length - 1)) % bs.length]; n.focus(); loadMarket(n.dataset.v); });
+    addEventListener('resize', moveInd); if (document.fonts) document.fonts.ready.then(moveInd); moveInd();
+    const mStart = () => { if (mStarted) return; mStarted = true; loadMarket('grails'); setTimeout(() => mFetch('tens').catch(() => {}), 2500); };
+    if ('IntersectionObserver' in window) { const mo = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { mStart(); mo.disconnect(); } }, { rootMargin: '900px 0px' }); mo.observe($('#market')); } else mStart();
+    setInterval(() => { if (!document.hidden && mStarted) mChip(); }, 5000);
+    setInterval(() => { if (!document.hidden && mStarted) loadMarket(mview, true); }, 60000);
+  }
+
+  /* ---------- the tape: real listings between the strategy's moves ---------- */
+  const tapeEl = $('#tape');
+  tapeEl.addEventListener('error', e => { if (e.target.tagName === 'IMG') e.target.remove(); }, true);
+  setTimeout(async () => {
+    try {
+      const j = await mFetch('new'); const items = (j.items || []).slice(0, 12); if (items.length < 3) return;
+      const cyc = steps.map((s, i) => `<span>${i === steps.length - 1 ? `<b>${esc(s)}</b>` : esc(s)}<i></i></span>`), out = [];
+      items.forEach((x, k) => { out.push(`<span class="tl">${x.image ? `<img src="${esc(thumb(x.image, 60))}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}<em>listed</em>${esc(trunc(x.name, 30))}<b>${solFmt(x.price)} SOL</b><i></i></span>`); if (k % 3 === 2) out.push(cyc[(k / 3 | 0) % cyc.length]); });
+      const lap = out.join(''); tapeEl.innerHTML = lap + lap;
+      tapeEl.style.animationDuration = Math.max(40, tapeEl.scrollWidth / 2 / 50).toFixed(0) + 's';
+    } catch {}
+  }, 900);
+
   market(); vault();
   if (C.ca || C.vault) { setInterval(() => { if (!document.hidden) { market(); vault(); } }, 30000); setInterval(liveState, 1000); }
 })();
