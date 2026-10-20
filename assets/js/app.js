@@ -66,6 +66,19 @@
   // the step cards glow where the pointer is
   $$('.step').forEach(s => s.addEventListener('pointermove', e => { const r = s.getBoundingClientRect(); s.style.setProperty('--px', (e.clientX - r.left) + 'px'); s.style.setProperty('--py', (e.clientY - r.top) + 'px'); }));
 
+  /* ---------- motion: reading progress, a soft glow that follows the pointer, hero parallax, rising sparkles,
+     headings that rise word by word, magnetic buttons ---------- */
+  const prog = $('#progress'), glow = $('#cglow'), art = $('#heroArt');
+  let raf = 0; addEventListener('scroll', () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const h = document.documentElement.scrollHeight - innerHeight; prog.style.transform = `scaleX(${h > 0 ? Math.min(1, scrollY / h).toFixed(4) : 0})`; }); }, { passive: true });
+  if (!reduce && matchMedia('(pointer: fine)').matches) {
+    let gx = innerWidth / 2, gy = innerHeight / 3, tx = gx, ty = gy;
+    addEventListener('pointermove', e => { tx = e.clientX; ty = e.clientY; if (art) { const r = art.getBoundingClientRect(); const dx = (e.clientX - (r.left + r.width / 2)) / innerWidth, dy = (e.clientY - (r.top + r.height / 2)) / innerHeight; art.style.setProperty('--px', (dx * -26).toFixed(1) + 'px'); art.style.setProperty('--py', (dy * -18).toFixed(1) + 'px'); } }, { passive: true });
+    const follow = () => { gx += (tx - gx) * .08; gy += (ty - gy) * .08; glow.style.transform = `translate3d(${gx - 300}px, ${gy - 300}px, 0)`; requestAnimationFrame(follow); }; follow();
+  } else if (glow) glow.remove();
+  const rise = $('#rise'); if (rise && !reduce) for (let i = 0; i < 18; i++) { const e = document.createElement('i'); e.style.left = (20 + Math.random() * 60) + '%'; e.style.setProperty('--s', (4 + Math.random() * 7).toFixed(0) + 'px'); e.style.setProperty('--d', (4 + Math.random() * 5).toFixed(1) + 's'); e.style.setProperty('--dl', (-Math.random() * 8).toFixed(1) + 's'); e.style.setProperty('--x', ((Math.random() - .5) * 120).toFixed(0) + 'px'); rise.appendChild(e); }
+  $$('h2').forEach(h => { const parts = []; h.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent.split(/(\s+)/).forEach(w => parts.push(w.trim() ? `<span class="hw"><span>${esc(w)}</span></span>` : w)); else parts.push(`<b><span class="hw"><span>${esc(n.textContent)}</span></span></b>`); }); h.innerHTML = parts.join(''); h.querySelectorAll('.hw > span').forEach((s, i) => s.style.transitionDelay = (i * 60) + 'ms'); });
+  $$('.btn.y, .btn.ghost').forEach(b => { if (!matchMedia('(pointer: fine)').matches) return; b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * .18).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * .28).toFixed(1)}px)`; }); b.addEventListener('pointerleave', () => { b.style.transform = ''; }); });
+
   /* ---------- the binder: twelve slots, filled from the vault at launch ---------- */
   const pages = $('#pages');
   const emptySlots = (n = 12) => Array.from({ length: n }, (_, i) => `<div class="slot"><span>slot ${String(i + 1).padStart(2, '0')}</span></div>`).join('');
@@ -83,8 +96,6 @@
   }
 
   /* ---------- live: Dexscreener for the market, Solana for the burn and the vault, Magic Eden for the cards ---------- */
-  const RPC = 'https://solana-rpc.publicnode.com';
-  const rpc = async (method, params) => { const r = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) }); const j = await r.json(); if (j.error) throw new Error(j.error.message); return j.result; };
   const getJ = async (u, ms = 9000) => { const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms); try { const r = await fetch(u, { signal: ctl.signal }); if (!r.ok) throw new Error(r.status); return await r.json(); } finally { clearTimeout(t); } };
   function countTo(el, to, fmt) {
     if (!el) return; const from = el._v || 0; el._v = to;
@@ -94,8 +105,14 @@
   }
   let lastOk = 0;
   function liveState() {
-    const chip = $('#liveChip'), kicker = $('#kicker');
-    if (lastOk) { chip.className = 'chip live'; chip.innerHTML = `<i></i>live · ${Math.round((Date.now() - lastOk) / 1000)}s ago`; kicker.classList.add('live'); $('#status').textContent = 'live'; }
+    const chip = $('#liveChip');
+    if (lastOk) { chip.className = 'chip live'; chip.innerHTML = `<i></i>live · ${Math.round((Date.now() - lastOk) / 1000)}s ago`; }
+  }
+  let liveCache = null, liveAt = 0;
+  async function liveApi() {
+    if (liveCache && Date.now() - liveAt < 15000) return liveCache;
+    const qs = new URLSearchParams(); if (C.ca) qs.set('ca', C.ca); if (C.vault) qs.set('vault', C.vault);
+    liveCache = await getJ('/api/live?' + qs.toString()); liveAt = Date.now(); return liveCache;
   }
   async function market() {
     if (!C.ca) return;
@@ -110,24 +127,25 @@
       } else { $('#sMcapD').textContent = 'no trading pair yet'; }
     } catch { $('#sMcapD').textContent = 'the chart is not answering, retrying'; }
     try {
-      const s = await rpc('getTokenSupply', [C.ca, { commitment: 'confirmed' }]);
-      const left = Number(s.value.uiAmountString || s.value.uiAmount || 0); const burned = Math.max(0, 1e9 - left);
-      countTo($('#sBurn'), burned, big); $('#sBurnD').textContent = `${(burned / 1e7).toFixed(2)}% of the supply, gone for good`; lastOk = Date.now();
+      const r = await liveApi();
+      if (r.burned != null) { countTo($('#sBurn'), r.burned, big); $('#sBurnD').textContent = `${(r.burned / 1e7).toFixed(2)}% of the supply, gone for good`; lastOk = Date.now(); }
+      else $('#sBurnD').textContent = 'Solana is busy, retrying';
     } catch { $('#sBurnD').textContent = 'Solana is busy, retrying'; }
     liveState();
   }
   async function vault() {
     if (!C.vault) return;
-    try { const b = await rpc('getBalance', [C.vault, { commitment: 'confirmed' }]); countTo($('#sVault'), b.value / 1e9, v => v.toFixed(2) + ' SOL'); lastOk = Date.now(); } catch { $('#sVaultD').textContent = 'Solana is busy, retrying'; }
     try {
-      const list = await getJ(`https://api-mainnet.magiceden.dev/v2/wallets/${C.vault}/tokens?offset=0&limit=100`);
-      const cards = (Array.isArray(list) ? list : []).filter(t => t && t.image);
-      countTo($('#sCards'), cards.length, v => String(Math.round(v)));
-      if (cards.length) {
-        pages.innerHTML = cards.slice(0, 24).map(t => `<a class="slot full" href="https://solscan.io/token/${esc(t.mintAddress)}" target="_blank" rel="noopener" title="${esc(t.name)}"><img src="${esc(t.image)}" alt="${esc(t.name)}" loading="lazy" referrerpolicy="no-referrer"><span class="nm">${esc(t.name)}</span></a>`).join('') + (cards.length < 12 ? emptySlots(12 - cards.length) : '');
-        $('#binderNote').textContent = `${cards.length} card${cards.length === 1 ? '' : 's'} in the vault right now, read from the wallet.`;
-      } else $('#binderNote').textContent = 'The vault holds no cards right now. The next grail lands here.';
-    } catch { $('#sCardsD').textContent = 'the card index is not answering, retrying'; }
+      const r = await liveApi();
+      if (r.vaultSol != null) { countTo($('#sVault'), r.vaultSol, v => v.toFixed(2) + ' SOL'); lastOk = Date.now(); } else $('#sVaultD').textContent = 'Solana is busy, retrying';
+      if (r.cards) {
+        const cards = r.cards; countTo($('#sCards'), cards.length, v => String(Math.round(v)));
+        if (cards.length) {
+          pages.innerHTML = cards.slice(0, 24).map(t => `<a class="slot full" href="https://solscan.io/token/${esc(t.mint)}" target="_blank" rel="noopener" title="${esc(t.name)}"><img src="${esc(t.image)}" alt="${esc(t.name)}" loading="lazy" referrerpolicy="no-referrer"><span class="nm">${esc(t.name)}</span></a>`).join('') + (cards.length < 12 ? emptySlots(12 - cards.length) : '');
+          $('#binderNote').textContent = `${cards.length} card${cards.length === 1 ? '' : 's'} in the vault right now, read from the wallet.`;
+        } else $('#binderNote').textContent = 'The vault holds no cards right now. The next grail lands here.';
+      } else $('#sCardsD').textContent = 'the card index is not answering, retrying';
+    } catch { $('#sVaultD').textContent = 'Solana is busy, retrying'; }
     liveState();
   }
   // receipts
