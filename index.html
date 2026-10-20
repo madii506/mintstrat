@@ -15,17 +15,19 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/img/favicon-180.png">
 <link rel="preload" href="/assets/fonts/sora.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/css/site.css?v=1">
+<link rel="stylesheet" href="/assets/css/site.css?v=2">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><i class="glow g1"></i><i class="glow g2"></i><i class="glow g3"></i><div class="grid"></div><div class="tw" id="tw"></div></div>
 <div class="grain" aria-hidden="true"></div>
 
+<div class="progress" id="progress" aria-hidden="true"></div>
+<div class="cglow" id="cglow" aria-hidden="true"></div>
 <nav class="top" id="nav">
   <div class="wrap in">
     <a class="logo" href="#top" aria-label="MintStrat, back to top"><img src="/assets/img/card-star.webp" alt="" width="22" height="31"><span>Mint<b>Strat</b></span></a>
-    <div class="links" id="links"><a href="#how">How it works</a><a href="#live">Live</a><a href="#binder">Binder</a><a href="#rules">Rules</a><a href="#token">$MINTSTRAT</a><a href="#faq">FAQ</a></div>
-    <div class="navr"><a class="btn ghost sm" href="/docs">Docs</a><span id="navBuy"></span><button class="menu" id="menu" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i></button></div>
+    <div class="links" id="links"><a href="#how">How it works</a><a href="#live">Live</a><a href="#binder">Binder</a><a href="#rules">Rules</a><a href="#faq">FAQ</a></div>
+    <div class="navr"><a class="btn ghost sm" href="/docs">Docs</a><span id="navBuy"></span><span id="navWallet" class="wwrap"></span><button class="menu" id="menu" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i></button></div>
   </div>
 </nav>
 
@@ -33,13 +35,12 @@
 <header class="hero" id="top">
   <div class="wrap hero-in">
     <div class="hero-copy">
-      <div class="kicker" id="kicker"><span class="dot"></span><span id="status">pre-launch</span> · the Pokémon card strategy</div>
       <h1><span class="l"><span>Fees cop grails.</span></span><span class="l"><span>Grails get flipped.</span></span><span class="l y"><span>Every flip burns supply.</span></span></h1>
       <p class="mono-line">GRADED POKÉMON CARDS · BOUGHT WITH FEES · <b>ON CHAIN</b></p>
       <div class="ctas"><a class="btn y" href="#how">How it works</a><a class="btn ghost" href="#live">Watch the vault</a></div>
     </div>
     <div class="hero-art" id="heroArt">
-      <div class="rays"></div><div class="halo"></div>
+      <div class="rays"></div><div class="halo"></div><div class="rise" id="rise" aria-hidden="true"></div>
       <svg class="lines" viewBox="0 0 560 560" preserveAspectRatio="none" aria-hidden="true"><path d="M280 280 L180 150 L90 90"/><path d="M280 280 L420 260 L520 250"/><path d="M280 280 L200 390 L110 470"/><path d="M280 280 L360 120 L470 60"/></svg>
       <div class="fan">
         <div class="holo c1" data-tilt><div class="in"><img src="/assets/img/card-bolt.webp" alt="A holo trading card with a lightning emblem" width="560" height="784"><i class="foil"></i><i class="glare"></i></div></div>
@@ -149,14 +150,13 @@
       <details><summary>What does the burn do?</summary><div>Burned tokens are gone for good. Every sale shrinks the supply, so each $MINTSTRAT left is a bigger share of what's next.</div></details>
       <details><summary>Can I check every move?</summary><div>Yes. Every buy, listing and burn is a transaction from the vault wallet. The live section links the wallet, the token and the chart at launch.</div></details>
       <details><summary>Is MintStrat connected to Pokémon or Nintendo?</summary><div>No. MintStrat is independent and not affiliated with Nintendo, Creatures, GAME FREAK, The Pokémon Company or any grading company. It just buys the cards.</div></details>
-      <details><summary>Is this financial advice?</summary><div>No. Memecoins are risky and card prices move. Only use what you can afford to lose.</div></details>
     </div>
   </div>
 </section>
 </main>
-<footer><div class="wrap">MintStrat is independent. Pokémon is a trademark of its owners. Not financial advice.</div></footer>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/assets/js/config.js?v=1"></script>
-<script src="/assets/js/app.js?v=1"></script>
+<script src="/assets/js/app.js?v=3"></script>
+<script src="/assets/js/wallet.js?v=1"></script>
 </body>
 </html>

@@ -15,17 +15,19 @@
 <link rel="icon" type="image/png" href="/assets/img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/img/favicon-180.png">
 <link rel="preload" href="/assets/fonts/sora.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/css/site.css?v=1">
+<link rel="stylesheet" href="/assets/css/site.css?v=2">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><i class="glow g1"></i><i class="glow g2"></i><i class="glow g3"></i><div class="grid"></div><div class="tw" id="tw"></div></div>
 <div class="grain" aria-hidden="true"></div>
 
+<div class="progress" id="progress" aria-hidden="true"></div>
+<div class="cglow" id="cglow" aria-hidden="true"></div>
 <nav class="top" id="nav">
   <div class="wrap in">
     <a class="logo" href="/" aria-label="MintStrat, back to top"><img src="/assets/img/card-star.webp" alt="" width="22" height="31"><span>Mint<b>Strat</b></span></a>
-    <div class="links" id="links"><a href="/#how">How it works</a><a href="/#live">Live</a><a href="/#binder">Binder</a><a href="/#rules">Rules</a><a href="/#token">$MINTSTRAT</a><a href="/#faq">FAQ</a></div>
-    <div class="navr"><a class="btn ghost sm" href="/docs">Docs</a><span id="navBuy"></span><button class="menu" id="menu" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i></button></div>
+    <div class="links" id="links"><a href="/#how">How it works</a><a href="/#live">Live</a><a href="/#binder">Binder</a><a href="/#rules">Rules</a><a href="/#faq">FAQ</a></div>
+    <div class="navr"><a class="btn ghost sm" href="/docs">Docs</a><span id="navBuy"></span><span id="navWallet" class="wwrap"></span><button class="menu" id="menu" type="button" aria-label="Menu" aria-expanded="false"><i></i><i></i></button></div>
   </div>
 </nav>
 
@@ -70,8 +72,9 @@
   <p style="margin-top:40px"><a class="btn y" href="/">Back to MintStrat</a></p>
 </article>
 </main>
-<footer><div class="wrap">MintStrat is independent. Pokémon is a trademark of its owners. Not financial advice.</div></footer>
 <script src="/assets/js/config.js?v=1"></script>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/assets/js/wallet.js?v=1"></script>
 <script>(function(){var C=window.MINT||{};document.querySelectorAll('[data-cfg]').forEach(function(e){var v=C[e.dataset.cfg];if(v!=null)e.textContent=v;});var n=document.getElementById('nav');addEventListener('scroll',function(){n.classList.toggle('scrolled',scrollY>10)},{passive:true});var m=document.getElementById('menu');m.addEventListener('click',function(){n.classList.toggle('open')});})();</script>
 </body>
 </html>
