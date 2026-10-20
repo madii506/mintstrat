@@ -180,7 +180,7 @@
 
   /* ---------- 02 the market: real graded Pokémon listings, through our own /api/market (Magic Eden underneath) ---------- */
   const mgrid = $('#mgrid'), mchip = $('#mktChip'), mtabs = $('#mktTabs'), mind = mtabs && mtabs.querySelector('.tab-ind');
-  const mcache = {}; let mview = 'grails', mreq = 0, mAt = 0, mStarted = false;
+  const mcache = {}; let mview = 'fair', mreq = 0, mAt = 0, mStarted = false;
   const solFmt = v => v >= 1000 ? Math.round(v).toLocaleString('en-US') : v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
   const usd0 = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e5 ? '$' + Math.round(v / 1e3) + 'K' : v >= 1e4 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + Math.round(v).toLocaleString('en-US');
   const trunc = (s, n) => (s = String(s || '')).length > n ? s.slice(0, n - 1).trim() + '…' : s;
@@ -191,10 +191,11 @@
   function mCard(x, i) {
     const gl = [x.grader, x.grade].filter(Boolean).join(' ') || x.gradeLabel || '';
     const cop = C.vault && liveCache && liveCache.vaultSol != null && x.price <= liveCache.vaultSol;
-    const meta = [x.year, x.gradeLabel].filter(Boolean).join(' · ') || 'graded, vaulted';
+    const meta = [x.year, x.insured ? 'insured ' + usd0(x.insured) : x.gradeLabel].filter(Boolean).join(' · ') || 'graded, vaulted';
+    const under = x.usd != null && x.insured ? Math.round((1 - x.usd / x.insured) * 100) : 0;
     return `<a class="mc" href="${esc(x.url)}" target="_blank" rel="noopener" style="--d:${(Math.min(i, 12) * .045).toFixed(3)}s" title="${esc(x.full || x.name)}">`
       + `<div class="mimg">${x.image ? `<img src="${esc(thumb(x.image, 400))}" data-o="${esc(x.image)}" alt="${esc(x.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<span class="noimg">no photo</span>'}`
-      + (gl ? `<span class="grade${Number(x.grade) === 10 ? ' g10' : ''}">${esc(gl)}</span>` : '') + (cop ? '<span class="mcop">vault can cop</span>' : '') + '</div>'
+      + (gl ? `<span class="grade${Number(x.grade) === 10 ? ' g10' : ''}">${esc(gl)}</span>` : '') + (under >= 3 ? `<span class="mval">${under}% under</span>` : '') + (cop ? '<span class="mcop">vault can cop</span>' : '') + '</div>'
       + `<div class="mbody"><div class="mname">${esc(x.name || 'Graded card')}</div><div class="mmeta">${esc(meta)}</div>`
       + `<div class="mprice"><b>${solFmt(x.price)} SOL</b><span>${x.usd != null ? '≈ ' + usd0(x.usd) : ''}</span></div></div></a>`;
   }
@@ -235,7 +236,7 @@
     mtabs.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b && b.dataset.v !== mview) loadMarket(b.dataset.v); });
     mtabs.addEventListener('keydown', e => { if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return; const bs = [...mtabs.querySelectorAll('button')], i = bs.findIndex(b => b.dataset.v === mview), n = bs[(i + (e.key === 'ArrowRight' ? 1 : bs.length - 1)) % bs.length]; n.focus(); loadMarket(n.dataset.v); });
     addEventListener('resize', moveInd); if (document.fonts) document.fonts.ready.then(moveInd); moveInd();
-    const mStart = () => { if (mStarted) return; mStarted = true; loadMarket('grails'); setTimeout(() => mFetch('tens').catch(() => {}), 2500); };
+    const mStart = () => { if (mStarted) return; mStarted = true; loadMarket('fair'); setTimeout(() => mFetch('tens').catch(() => {}), 2500); };
     if ('IntersectionObserver' in window) { const mo = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { mStart(); mo.disconnect(); } }, { rootMargin: '900px 0px' }); mo.observe($('#market')); } else mStart();
     setInterval(() => { if (!document.hidden && mStarted) mChip(); }, 5000);
     setInterval(() => { if (!document.hidden && mStarted) loadMarket(mview, true); }, 60000);
